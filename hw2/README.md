@@ -2,7 +2,7 @@
 
 Dynamic loading
 ```sh
-$ gcc *.c -std=c99 -o min_grep # compile 
+$ gcc *.c -std=c99 -o mini_grep # compile 
 $ ./mini_grep system . 4 dynamic
 ```
 

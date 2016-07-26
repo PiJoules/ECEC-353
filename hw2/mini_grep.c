@@ -18,6 +18,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <pthread.h>
+#include <assert.h>
 #include "queue.h"
 
 int serialSearch(char **);
@@ -39,11 +40,11 @@ main(int argc, char** argv)
           struct timeval start, stop;                                           /* Start the timer. */
           gettimeofday(&start, NULL);
 
-          num_occurrences = serialSearch(argv);     /* Perform a serial search of the file system. */
-          printf("\n The string %s was found %d times within the file system.", argv[1], num_occurrences);
+          //num_occurrences = serialSearch(argv);     /* Perform a serial search of the file system. */
+          //printf("\n The string %s was found %d times within the file system.", argv[1], num_occurrences);
 
-          gettimeofday(&stop, NULL);
-          printf("\n Overall execution time = %fs.", \
+          //gettimeofday(&stop, NULL);
+          //printf("\n Overall execution time = %fs.", \
                                 (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 
 
@@ -171,6 +172,7 @@ int handle_file(queue_element_t* element, char* search_string){
 
 /**
  * Function for handling an element form the queue.
+ * This is essentially a wrapper for handle_file and handle_dir.
  *
  * Returns:
  *  Number of occurances found.
@@ -244,11 +246,24 @@ parallelSearchStatic(char **argv)
 
 
 /**
+ * Wrapper for function arguments.
+ */
+struct func_args {
+    queue_element_t* element;
+    queue_t* queue;
+    struct dirent* entry;
+    char* search_string;
+
+    int is_running;  // thread is running
+    int result;  // result of function
+};
+
+/**
  * Checks if any threads are running in the array of thread statuses.
  */
-int thread_is_working(int num_threads, int* thread_status){
+int thread_is_working(int num_threads, struct func_args* thread_args){
     for (int i = 0; i < num_threads; i++){
-        if (thread_status[i]){
+        if (thread_args[i].is_running){
             return 1;
         }
     }
@@ -258,32 +273,36 @@ int thread_is_working(int num_threads, int* thread_status){
 /**
  * Returns the index of the first available thread.
  * Returns -1 if none are available.
+ *
+ * I could just have a counter that cycles and only increments
+ * through the whole array for efficiency, but I'm lazy.
  */
-int first_available_thread(int num_threads, int* thread_status){
+int first_available_thread(int num_threads, struct func_args* thread_args){
     for (int i = 0; i < num_threads; i++){
-        if (!thread_status[i]){
+        if (!thread_args[i].is_running){
             return i;
         }
     }
     return -1;
 }
 
+void* handle_element_wrapper(void* args){
+    struct func_args thread_args = *((struct func_args*) args);
+    assert(thread_args.is_running);
+    ((struct func_args*) args)->result = handle_element(
+        thread_args.element,
+        thread_args.queue,
+        thread_args.entry,
+        thread_args.search_string);
+    printf("result: %d\n", ((struct func_args*) args)->result);
+    ((struct func_args*) args)->is_running = 0;
+    return NULL;
+}
+
 
 int                             /* Parallel search with dynamic load balancing. */
 parallelSearchDynamic(char **argv)
 {
-          int num_occurrences = 0;
-
-          // Get the number of threads
-          int num_threads = atoi(argv[3]);
-
-          // Keep track of which threads are done
-          pthread_t threads[num_threads];
-          int thread_status[num_threads];  // 0: not running, 1: running
-          for (int i = 0; i < num_threads; i++){
-              thread_status[i] = 0;
-          }
-
           // Create the queue
           queue_element_t *element;
           struct dirent *entry = (struct dirent *)malloc(sizeof(struct dirent) + MAX_LENGTH);
@@ -298,21 +317,74 @@ parallelSearchDynamic(char **argv)
           element->next = NULL;
           insertElement(queue, element);                            /* Insert the initial path name into the queue. */
 
+          // Get the number of threads
+          int num_occurrences = 0;
+          int num_threads = atoi(argv[3]);
 
-          while(queue->head != NULL || thread_is_working(num_threads, thread_status)){                                   /* While there is work in the queue, process it. */
-                     queue_element_t *element = removeElement(queue);
+          // Keep track of which threads are done
+          pthread_t threads[num_threads];
+          struct func_args thread_args[num_threads];
+          int thread_status[num_threads];  // 0: not running, 1: Running and committed results.
+          for (int i = 0; i < num_threads; i++){
+              thread_args[i].queue = queue;
+              thread_args[i].entry = entry;
+              thread_args[i].search_string = argv[1];
+              thread_args[i].is_running = 0;
+              thread_args[i].result = 0;
+          }
 
-                     // Create new thread
-                     int open_thread = first_available_thread(num_threads, thread_status);
+          // Cases:
+          // - Empty queue; no threads runninng
+          //   - Exit loop
+          // - Filled queue; no threads running
+          //   - Pop from queue. Assign to new thread.
+          // - Empty queue; threads running
+          //   - The threads may have more stuff to add to queue.
+          //     Wait for the threads to finish.
+          // - Filled queue; threads running
+          //   - Pop from queue. Assign to next available thread.
+          //
+          //    TODO: Create another array that keeps track of committed results.
+          //    This is necessary since we cannot use the is_running memeber of the
+          //    args which is controlled on another thread. Using is_running could lead
+          //    to a situation where we have not added to the queue (queue is empty),
+          //    all threads are not running, we have not committed the latest results,
+          //    and we have not added another element to the queue as a result of this
+          //    thread.
+          //
+          while(queue->head != NULL || thread_is_working(num_threads, thread_args)){                                   /* While there is work in the queue, process it. */
+                     // Create new thread if a thread is open.
+                     int open_thread = first_available_thread(num_threads, thread_args);
                      if (open_thread == -1){
                          // No available threads
                          continue;
                      }
 
-                     // Create new thread
-                     
-                     //pthread_create(&threads[i], NULL, , );
-                     //thread_status[open_thread] = 1;
+                     // Handle value of previously ran thread.
+                     // Initially, all the threads are not running, but the initial
+                     // result is 0, so it's ok to add.
+                     assert(!thread_args[open_thread].is_running);
+                     num_occurrences += thread_args[open_thread].result;
+                     thread_args[open_thread].result = 0;  // reset result
+
+                     // Get next elem if exists
+                     if (queue->head == NULL){
+                         continue;
+                     }
+                     queue_element_t *element = removeElement(queue);
+
+                     // Create new thread and function arg
+                     thread_args[open_thread].element = element;
+                     thread_args[open_thread].is_running = 1;
+                     pthread_create(&threads[open_thread], NULL, handle_element_wrapper, &thread_args[open_thread]);
+          }
+
+          for (int i = 0; i < num_threads; i++){
+          //    if (thread_args[i].is_running){
+          //        pthread_join(threads[i], NULL);
+          //        num_occurrences += thread_args[i].result;
+          //    }
+                printf("result[%d]: %d\n", i, thread_args[i].result);
           }
 
           return num_occurrences;
