@@ -261,9 +261,9 @@ struct func_args {
 /**
  * Checks if any threads are running in the array of thread statuses.
  */
-int thread_is_working(int num_threads, struct func_args* thread_args){
+int thread_is_working(int num_threads, int* thread_status){
     for (int i = 0; i < num_threads; i++){
-        if (thread_args[i].is_running){
+        if (thread_status[i]){
             return 1;
         }
     }
@@ -301,8 +301,7 @@ void* handle_element_wrapper(void* args){
 
 
 int                             /* Parallel search with dynamic load balancing. */
-parallelSearchDynamic(char **argv)
-{
+parallelSearchDynamic(char **argv){
           // Create the queue
           queue_element_t *element;
           struct dirent *entry = (struct dirent *)malloc(sizeof(struct dirent) + MAX_LENGTH);
@@ -331,6 +330,8 @@ parallelSearchDynamic(char **argv)
               thread_args[i].search_string = argv[1];
               thread_args[i].is_running = 0;
               thread_args[i].result = 0;
+
+              thread_status[i] = 0;
           }
 
           // Cases:
@@ -352,7 +353,7 @@ parallelSearchDynamic(char **argv)
           //    and we have not added another element to the queue as a result of this
           //    thread.
           //
-          while(queue->head != NULL || thread_is_working(num_threads, thread_args)){                                   /* While there is work in the queue, process it. */
+          while(queue->head != NULL || thread_is_working(num_threads, thread_status)){                                   /* While there is work in the queue, process it. */
                      // Create new thread if a thread is open.
                      int open_thread = first_available_thread(num_threads, thread_args);
                      if (open_thread == -1){
@@ -363,9 +364,15 @@ parallelSearchDynamic(char **argv)
                      // Handle value of previously ran thread.
                      // Initially, all the threads are not running, but the initial
                      // result is 0, so it's ok to add.
-                     assert(!thread_args[open_thread].is_running);
-                     num_occurrences += thread_args[open_thread].result;
-                     thread_args[open_thread].result = 0;  // reset result
+                     //assert(!thread_args[open_thread].is_running);
+                     //assert(thread_status[open_thread]);
+                     //num_occurrences += thread_args[open_thread].result;
+                     //thread_args[open_thread].result = 0;  // reset result
+                     //thread_status[open_thread] = 0;
+                     if (thread_status[open_thread] && !thread_args[open_thread].is_running){
+                         // Have not committed changes
+                         
+                     }
 
                      // Get next elem if exists
                      if (queue->head == NULL){

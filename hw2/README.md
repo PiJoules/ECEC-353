@@ -2,7 +2,7 @@
 
 Dynamic loading
 ```sh
-$ gcc *.c -std=c99 -o mini_grep # compile 
+$ gcc *.c -std=c99 -o mini_grep # compile; may need to add -pthread if the pthread library isn't automatically linked
 $ ./mini_grep system . 4 dynamic
 ```
 
