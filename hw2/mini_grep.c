@@ -128,46 +128,31 @@ int handle_dir(queue_element_t* element, queue_t* queue, struct dirent* entry){
  *  Number of occurances found (non-negative)
  *  -1 on unable to open file
  */
-int handle_file(queue_element_t* element, char* search_string){
-    printf("%s is a regular file. \n", element->path_name);
-    FILE *file_to_search;
-    char buffer[MAX_LENGTH];
-    char *bufptr, *searchptr, *tokenptr;
-    int num_occurrences = 0;
+int handle_file(queue_element_t* element, char* word){
+    FILE *fp;
+    int count = 0;
+    int ch, len;
 
-    /* Search the file for the search string provided as the command-line argument. */ 
-    file_to_search = fopen(element->path_name, "r");
-    if(file_to_search == NULL){
-      printf("Unable to open file %s \n", element->path_name);
-      return -1;
-    } 
-    else{
-      while(1){
-                 bufptr = fgets(buffer, sizeof(buffer), file_to_search);        /* Read in a line from the file. */
-                 if(bufptr == NULL){
-                            if(feof(file_to_search)) break;
-                            if(ferror(file_to_search)){
-                                      printf("Error reading file %s \n", element->path_name);
-                                      break;
-                            }
-                 }
-                 
-                 /* Break up line into tokens and search each token. */ 
-                 tokenptr = strtok(buffer, " ,.-");
-                 while(tokenptr != NULL){
-                            searchptr = strstr(tokenptr, search_string);
-                            if(searchptr != NULL){
-                                      printf("Found string %s within \
-                                                 file %s. \n", search_string, element->path_name);
-                                      num_occurrences ++;
-                            }
-                            
-                            tokenptr = strtok(NULL, " ,.-");                        /* Get next token from the line. */
-                 }
-      }
+    if(NULL==(fp=fopen(element->path_name, "r")))
+        return -1;
+    len = strlen(word);
+    for(;;){
+        int i;
+        if(EOF==(ch=fgetc(fp))) break;
+        if((char)ch != *word) continue;
+        for(i=1;i<len;++i){
+            if(EOF==(ch = fgetc(fp))) goto end;
+            if((char)ch != word[i]){
+                fseek(fp, 1-i, SEEK_CUR);
+                goto next;
+            }
+        }
+        ++count;
+        next: ;
     }
-    fclose(file_to_search);
-    return num_occurrences;
+end:
+    fclose(fp);
+    return count;
 }
 
 /**
@@ -261,9 +246,9 @@ struct func_args {
 /**
  * Checks if any threads are running in the array of thread statuses.
  */
-int thread_is_working(int num_threads, int* thread_status){
+int thread_is_working(int num_threads, struct func_args* thread_args){
     for (int i = 0; i < num_threads; i++){
-        if (thread_status[i]){
+        if (thread_args[i].is_running){
             return 1;
         }
     }
@@ -279,7 +264,7 @@ int thread_is_working(int num_threads, int* thread_status){
  */
 int first_available_thread(int num_threads, struct func_args* thread_args){
     for (int i = 0; i < num_threads; i++){
-        if (!thread_args[i].is_running){
+        if (!(thread_args[i].is_running)){
             return i;
         }
     }
@@ -294,7 +279,6 @@ void* handle_element_wrapper(void* args){
         thread_args.queue,
         thread_args.entry,
         thread_args.search_string);
-    printf("result: %d\n", ((struct func_args*) args)->result);
     ((struct func_args*) args)->is_running = 0;
     return NULL;
 }
@@ -323,15 +307,12 @@ parallelSearchDynamic(char **argv){
           // Keep track of which threads are done
           pthread_t threads[num_threads];
           struct func_args thread_args[num_threads];
-          int thread_status[num_threads];  // 0: not running, 1: Running and committed results.
           for (int i = 0; i < num_threads; i++){
               thread_args[i].queue = queue;
               thread_args[i].entry = entry;
               thread_args[i].search_string = argv[1];
               thread_args[i].is_running = 0;
               thread_args[i].result = 0;
-
-              thread_status[i] = 0;
           }
 
           // Cases:
@@ -344,16 +325,7 @@ parallelSearchDynamic(char **argv){
           //     Wait for the threads to finish.
           // - Filled queue; threads running
           //   - Pop from queue. Assign to next available thread.
-          //
-          //    TODO: Create another array that keeps track of committed results.
-          //    This is necessary since we cannot use the is_running memeber of the
-          //    args which is controlled on another thread. Using is_running could lead
-          //    to a situation where we have not added to the queue (queue is empty),
-          //    all threads are not running, we have not committed the latest results,
-          //    and we have not added another element to the queue as a result of this
-          //    thread.
-          //
-          while(queue->head != NULL || thread_is_working(num_threads, thread_status)){                                   /* While there is work in the queue, process it. */
+          while (thread_is_working(num_threads, thread_args) || queue->head != NULL){
                      // Create new thread if a thread is open.
                      int open_thread = first_available_thread(num_threads, thread_args);
                      if (open_thread == -1){
@@ -364,34 +336,24 @@ parallelSearchDynamic(char **argv){
                      // Handle value of previously ran thread.
                      // Initially, all the threads are not running, but the initial
                      // result is 0, so it's ok to add.
-                     //assert(!thread_args[open_thread].is_running);
-                     //assert(thread_status[open_thread]);
-                     //num_occurrences += thread_args[open_thread].result;
-                     //thread_args[open_thread].result = 0;  // reset result
-                     //thread_status[open_thread] = 0;
-                     if (thread_status[open_thread] && !thread_args[open_thread].is_running){
-                         // Have not committed changes
-                         
-                     }
+                     assert(!thread_args[open_thread].is_running);
+                     num_occurrences += thread_args[open_thread].result;
+                     thread_args[open_thread].result = 0;  // reset result
 
                      // Get next elem if exists
                      if (queue->head == NULL){
                          continue;
                      }
-                     queue_element_t *element = removeElement(queue);
+                     queue_element_t* new_element = removeElement(queue);
 
                      // Create new thread and function arg
-                     thread_args[open_thread].element = element;
+                     thread_args[open_thread].element = new_element;
                      thread_args[open_thread].is_running = 1;
                      pthread_create(&threads[open_thread], NULL, handle_element_wrapper, &thread_args[open_thread]);
           }
 
           for (int i = 0; i < num_threads; i++){
-          //    if (thread_args[i].is_running){
-          //        pthread_join(threads[i], NULL);
-          //        num_occurrences += thread_args[i].result;
-          //    }
-                printf("result[%d]: %d\n", i, thread_args[i].result);
+                num_occurrences += thread_args[i].result;
           }
 
           return num_occurrences;
