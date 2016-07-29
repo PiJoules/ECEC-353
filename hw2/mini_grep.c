@@ -40,11 +40,11 @@ main(int argc, char** argv)
           struct timeval start, stop;                                           /* Start the timer. */
           gettimeofday(&start, NULL);
 
-          //num_occurrences = serialSearch(argv);     /* Perform a serial search of the file system. */
-          //printf("\n The string %s was found %d times within the file system.", argv[1], num_occurrences);
+          num_occurrences = serialSearch(argv);     /* Perform a serial search of the file system. */
+          printf("\n The string %s was found %d times within the file system.", argv[1], num_occurrences);
 
-          //gettimeofday(&stop, NULL);
-          //printf("\n Overall execution time = %fs.", \
+          gettimeofday(&stop, NULL);
+          printf("\n Overall execution time = %fs.", \
                                 (float)(stop.tv_sec - start.tv_sec + (stop.tv_usec - start.tv_usec)/(float)1000000));
 
 
@@ -85,7 +85,6 @@ int handle_dir(queue_element_t* element, queue_t* queue, struct dirent* entry){
     int status;
     struct dirent* result = NULL;
     queue_element_t* new_element;
-    printf("%s is a directory. \n", element->path_name);
     DIR* directory = opendir(element->path_name);
     if(directory == NULL){
         printf("Unable to open directory %s \n", element->path_name);
@@ -152,6 +151,7 @@ int handle_file(queue_element_t* element, char* word){
     }
 end:
     fclose(fp);
+
     return count;
 }
 
@@ -195,36 +195,13 @@ int handle_element(queue_element_t* element, queue_t* queue, struct dirent* entr
     return num_occurrences;
 }
 
-
-int                         /* Serial search of the file system starting from the specified path name. */
-serialSearch(char **argv)           
-{
+int serialSearchActual(struct dirent* entry, queue_t* queue, char* search_string, char* current_dir){
           int num_occurrences = 0;
-          queue_element_t *element;
-          struct dirent *entry = (struct dirent *)malloc(sizeof(struct dirent) + MAX_LENGTH);
-
-          queue_t *queue = createQueue();               /* Create and initialize the queue data structure. */
-          element = (queue_element_t *)malloc(sizeof(queue_element_t));
-          if(element == NULL){
-                     perror("malloc");
-                     exit(EXIT_FAILURE);
-          }
-          strcpy(element->path_name, argv[2]);
-          element->next = NULL;
-          insertElement(queue, element);                            /* Insert the initial path name into the queue. */
 
           while(queue->head != NULL){                                   /* While there is work in the queue, process it. */
                      queue_element_t *element = removeElement(queue);
-                     num_occurrences += handle_element(element, queue, entry, argv[1]);
+                     num_occurrences += handle_element(element, queue, entry, search_string);
           }
-
-          return num_occurrences;
-}
-
-int                             /* Parallel search with static load balancing accross threads. */
-parallelSearchStatic(char **argv)
-{
-          int num_occurrences = 0;
 
           return num_occurrences;
 }
@@ -238,10 +215,43 @@ struct func_args {
     queue_t* queue;
     struct dirent* entry;
     char* search_string;
+    char* current_dir;
 
     int is_running;  // thread is running
     int result;  // result of function
 };
+
+void* serialSearchWrapper(void* args){
+    struct func_args thread_args = *((struct func_args*) args);
+
+    ((struct func_args*) args)->result = serialSearchActual(
+        thread_args.entry,
+        thread_args.queue,
+        thread_args.search_string,
+        thread_args.current_dir);
+
+    return NULL;
+}
+
+
+int                         /* Serial search of the file system starting from the specified path name. */
+serialSearch(char **argv)           
+{
+          struct dirent *entry = (struct dirent *)malloc(sizeof(struct dirent) + MAX_LENGTH);
+
+          queue_t *queue = createQueue();               /* Create and initialize the queue data structure. */
+          queue_element_t* element = (queue_element_t *)malloc(sizeof(queue_element_t));
+          if(element == NULL){
+                     perror("malloc");
+                     exit(EXIT_FAILURE);
+          }
+          strcpy(element->path_name, argv[2]);
+          element->next = NULL;
+          insertElement(queue, element);                            /* Insert the initial path name into the queue. */
+          return serialSearchActual(entry, queue, argv[2], argv[1]);
+}
+
+
 
 /**
  * Checks if any threads are running in the array of thread statuses.
@@ -273,7 +283,6 @@ int first_available_thread(int num_threads, struct func_args* thread_args){
 
 void* handle_element_wrapper(void* args){
     struct func_args thread_args = *((struct func_args*) args);
-    assert(thread_args.is_running);
     ((struct func_args*) args)->result = handle_element(
         thread_args.element,
         thread_args.queue,
@@ -281,6 +290,64 @@ void* handle_element_wrapper(void* args){
         thread_args.search_string);
     ((struct func_args*) args)->is_running = 0;
     return NULL;
+}
+
+int                             /* Parallel search with static load balancing accross threads. */
+parallelSearchStatic(char **argv)
+{
+          int num_occurrences = 0;
+
+          queue_element_t *element;
+          struct dirent *entry = (struct dirent *)malloc(sizeof(struct dirent) + MAX_LENGTH);
+
+          queue_t *queue = createQueue();               /* Create and initialize the queue data structure. */
+          element = (queue_element_t *)malloc(sizeof(queue_element_t));
+          if(element == NULL){
+                     perror("malloc");
+                     exit(EXIT_FAILURE);
+          }
+          strcpy(element->path_name, argv[2]);
+          element->next = NULL;
+
+          int status = handle_dir(element, queue, entry);
+          if (status == -1){
+              printf("Could not open dir %s.\n", element->path_name);
+              exit(-1);
+          }
+
+          int num_threads = atoi(argv[3]);
+          pthread_t threads[num_threads];
+          struct func_args thread_args[num_threads];
+          queue_t* queues[num_threads];
+
+          for (int i = 0; i < num_threads; i++){
+              queues[i] = createQueue();
+          }
+
+          // Move each to new thread
+          int i = 0;
+          while (queue->head){
+             queue_element_t* new_element = removeElement(queue);
+             insertElement(queues[i], new_element);
+             i = (++i) % num_threads;
+          }
+
+          for (i = 0; i < num_threads; i++){
+              thread_args[i].queue = queues[i];
+              thread_args[i].entry = entry;
+              thread_args[i].search_string = argv[1];
+              thread_args[i].result = 0;
+              thread_args[i].current_dir = argv[2];
+
+              pthread_create(&threads[i], NULL, serialSearchWrapper, &thread_args[i]);
+          }
+
+          for (i = 0; i < num_threads; i++){
+              pthread_join(threads[i], NULL);
+              num_occurrences += thread_args[i].result;
+          }
+
+          return num_occurrences;
 }
 
 
@@ -336,7 +403,6 @@ parallelSearchDynamic(char **argv){
                      // Handle value of previously ran thread.
                      // Initially, all the threads are not running, but the initial
                      // result is 0, so it's ok to add.
-                     assert(!thread_args[open_thread].is_running);
                      num_occurrences += thread_args[open_thread].result;
                      thread_args[open_thread].result = 0;  // reset result
 
