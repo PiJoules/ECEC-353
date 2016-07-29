@@ -248,7 +248,7 @@ serialSearch(char **argv)
           strcpy(element->path_name, argv[2]);
           element->next = NULL;
           insertElement(queue, element);                            /* Insert the initial path name into the queue. */
-          return serialSearchActual(entry, queue, argv[2], argv[1]);
+          return serialSearchActual(entry, queue, argv[1], argv[2]);
 }
 
 
