@@ -3,7 +3,7 @@
 all: server
 
 %: %.c
-	gcc $< -o $@
+	gcc $< chat.c -o $@ -std=gnu99 -Wall -Werror
 
 clean:
 	rm -rf server client
