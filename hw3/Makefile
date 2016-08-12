@@ -8,4 +8,10 @@ all: server
 clean:
 	rm -rf server client
 
+valgrind: server
+	valgrind --leak-check=yes ./server
+
+test: valgrind
+	ipcs -m
+
 
