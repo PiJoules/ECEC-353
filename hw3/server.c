@@ -14,6 +14,12 @@ void sigterm_handler(int signum){
 
 
 int main(int argc, char* argv[]){
+    // Only 1 server should be up
+    if (server_is_up()){
+        fprintf(stderr, "Another instance of this server has already been started. Multiple instances cannot be created.\n");
+        exit(EXIT_FAILURE);
+    }
+
     // Create the server server
     Node* server = create_node(SERVER_NAME, DEFAULT_SHM_SIZE, server_permissions);
     server->status = AVAILABLE;
