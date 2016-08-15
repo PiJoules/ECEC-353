@@ -43,12 +43,6 @@ Node* create_node(const char* name, size_t size, int permissions){
     }
 
     // Create and copy the node into shared mem
-    //Node node;
-    //node.name = name;
-    //node.id = shmid;
-    //node.buffer_size = size;
-    //node.status = AVAILABLE;
-    //memcpy(shm_addr, &node, sizeof(Node));
     Node* node = (Node*)shm_addr;
     node->name = name;
     node->id = shmid;
