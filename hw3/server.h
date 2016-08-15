@@ -3,6 +3,6 @@
 
 #include "chat.h"
 
-int server_shmalloc(key_t key, size_t size);
+void sigterm_handler(int signum);
 
 #endif

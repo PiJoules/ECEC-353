@@ -1,14 +1,14 @@
 .PHONY: all
 
-all: server
+all: server client
 
-%: %.c
+%: %.c chat.c
 	gcc $< chat.c -o $@ -std=gnu99 -Wall -Werror
 
 clean:
 	rm -rf server client
 
-valgrind: server
+valgrind: server client
 	valgrind --leak-check=yes ./server
 
 test: valgrind
