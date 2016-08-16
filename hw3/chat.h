@@ -49,9 +49,17 @@ struct Node {
     char* buffer;  // The address of this pointer is the start of the buffer (&node->buffer)
 };
 
+typedef enum {
+    JOIN_CREATE_GROUP,
+    BROADCAST_MESSAGE,
+    PRIVATE_MESSAGE,
+	 LEAVE_GROUP,
+} MessageType;
+
 struct Message {
     char sender[NAME_SIZE];
-    size_t content_size;
+	 MessageType type;
+	 size_t content_size;
     char content[MESSAGE_SIZE];  // Treat the same as the node buffer member.
 };
 

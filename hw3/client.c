@@ -27,7 +27,8 @@ int main(int argc, char* argv[]){
 
     // Send a test message to server
     Message message;
-    strcpy(message.sender, client_name);
+	 message.type = JOIN_CREATE_GROUP; 
+    strcpy(messagesender, client_name);
     strcpy(message.content, "Hello server");
     message.content_size = strlen(message.content);
 
