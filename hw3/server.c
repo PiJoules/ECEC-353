@@ -1,5 +1,5 @@
-include "server.h"
-include "hash.h"
+#include "server.h"
+#include "hash.h"
 
 
 /**
@@ -44,14 +44,13 @@ int main(int argc, char* argv[]){
 				const char* sender_name = message->sender;
 
 				Message response;
-				Message senderMessage;
 				strcpy(response.sender, SERVER_NAME);
 				strcpy(response.content, message->content);
 				response.content_size = strlen(response.content);
 
 				// client is new and wants to join a group
 				if (message->type == JOIN_CREATE_GROUP){
-					response.type = JOIN_CREATE_GROUP
+					response.type = JOIN_CREATE_GROUP;
 					
 					// check if client count has hit capacity
 					if (client_count < max_size){
@@ -132,15 +131,17 @@ int main(int argc, char* argv[]){
             	strcpy(response.content, "Session has been disconnected. Bye!");
             	response.content_size = strlen(response.content);
 					respond_to_message(&response, sender_name, server);
+					
+					char* group_id = (char*)ht_get(clients, message->sender);
+					ht_remove(clients, sender_name);
+					ll_remove_value(ht_get(group_to_clients, group_id), sender_name);
+					client_count--;
 				}
 				// print error
 				else {
 					fprintf(stderr, "Error with message type.\n");
 					exit(EXIT_FAILURE);
 				}
-
-				const char* sender_name = message->sender;
-            printf("%s\n", message->content);
 
         }
         sleep(1);

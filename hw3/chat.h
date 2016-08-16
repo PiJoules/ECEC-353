@@ -62,7 +62,7 @@ struct Node {
 typedef enum {
     JOIN_CREATE_GROUP,
     BROADCAST_MESSAGE,
-    PRIVATE_MESSAGE,
+    DISPLAY_USERS,
 	 LEAVE_GROUP,
 } MessageType;
 
