@@ -8,6 +8,7 @@ static int kill_server = 0;
 
 #define VOIDIFY_FUNC(var) (void* (*)(void*))var
 #define VOIDIFY_FUNC2(var) (void (*)(void*))var
+#define COMP_FUNC(var) (int (*)(void*, void*))var
 
 /**
  * Simple strdup implementation.
@@ -22,6 +23,10 @@ static char* str_copy(const char* str){
     strncpy(new_str, str, len);
     new_str[len] = '\0';
     return new_str;
+}
+
+static int str_equal(const char* str1, const char* str2){
+    return !strcmp(str1, str2);
 }
 
 
@@ -76,7 +81,7 @@ int main(int argc, char* argv[]){
 					LinkedList* list = (LinkedList*)ht_get(group_to_clients, group_id);
 
 					if ( !list ){
-						LinkedList* list = ll_create(free, VOIDIFY_FUNC(str_copy));
+						LinkedList* list = ll_create(free, VOIDIFY_FUNC(str_copy), COMP_FUNC(str_equal));
 						ll_prepend(list, message->sender);
 						ht_set(group_to_clients, group_id, list);
 						
@@ -107,7 +112,7 @@ int main(int argc, char* argv[]){
 					
 					char* group_id = (char*)ht_get(clients, message->sender);
 					ht_remove(clients, sender_name);
-					ll_remove_value(ht_get(group_to_clients, group_id), sender_name);
+					ll_remove_value(ht_get(group_to_clients, group_id), (void*)sender_name);
 					client_count--;
 				}
 			}

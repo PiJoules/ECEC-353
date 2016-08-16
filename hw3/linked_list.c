@@ -217,3 +217,28 @@ char* ll_str(LinkedList* ll){
     free(result);
     return new_result;
 }
+
+/**
+ * Remove from the linked list by value.
+ */
+void ll_remove_value(LinkedList* ll, void* value){
+    LinkedListNode* current = ll->head;
+    LinkedListNode* last = NULL;
+    while (current){
+        if (ll->eq_func(current->value, value)){
+            // Found it
+            if (!last){
+                // Removing first element in list
+                ll->head = current->next;
+            }
+            else {
+                last->next = current->next;
+            }
+            free_ll_node(ll, current);
+            ll->size--;
+            return;
+        }
+        last = current;
+        current = current->next;
+    }
+}
