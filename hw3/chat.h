@@ -17,6 +17,7 @@
 #include <stddef.h>
 #include <limits.h>
 
+// Macros (don't use these in real systems)
 #define SAFE_MALLOC(var_name, type, size) \
     type var_name = (type)malloc(size); \
     if (!var_name){ \
@@ -24,7 +25,8 @@
         exit(EXIT_FAILURE); \
     }
 
-#include "hash.h"
+#include "hashtable.h"
+#include "linked_list.h"
 
 // Place of shared memory where the server will initiually write to and
 // clients can listen to
@@ -63,7 +65,8 @@ typedef enum {
     JOIN_CREATE_GROUP,
     BROADCAST_MESSAGE,
     PRIVATE_MESSAGE,
-	 LEAVE_GROUP,
+	LEAVE_GROUP,
+    DISPLAY_USERS,
 } MessageType;
 
 struct Message {

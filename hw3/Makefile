@@ -1,7 +1,7 @@
 .PHONY: all
 
-EXE = server client test_linked_list
-LIB = chat.c hash.c list.c
+EXE = server client
+LIB = chat.c hashtable.c linked_list.c
 
 all: $(EXE)
 
@@ -13,7 +13,7 @@ clean:
 	rm -rf $(EXE)
 
 valgrind: $(EXE)
-	valgrind --leak-check=yes ./test_linked_list
+	#valgrind --leak-check=yes ./test_linked_list
 
 test: valgrind
 	ipcs -m
