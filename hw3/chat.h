@@ -15,6 +15,16 @@
 #include <assert.h>
 #include <signal.h>
 #include <stddef.h>
+#include <limits.h>
+
+#define SAFE_MALLOC(var_name, type, size) \
+    type var_name = (type)malloc(size); \
+    if (!var_name){ \
+        fprintf(stderr, "Could not malloc enough space for type.\n");\
+        exit(EXIT_FAILURE); \
+    }
+
+#include "hash.h"
 
 // Place of shared memory where the server will initiually write to and
 // clients can listen to
@@ -73,5 +83,6 @@ int node_is_up(char* node_name);
 int server_is_up();
 Message* send_message(Message* message, const char* recipient, Node* sender);
 void respond_to_message(Message* response, const char* recipient, Node* sender);
+
 
 #endif
