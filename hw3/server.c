@@ -1,9 +1,4 @@
 #include "server.h"
-<<<<<<< HEAD
-#include "hash.h"
-
-=======
->>>>>>> 05651a86c6b1e6d8b3065ded2a87e0c82131f2e6
 
 /**
  * Server constants.
@@ -62,54 +57,6 @@ int main(int argc, char* argv[]){
         if (server->status == RECIEVED_MESSAGE){
             // Handle the message
             Message* message = (Message*)(&(server->buffer));
-<<<<<<< HEAD
-				const char* sender_name = message->sender;
-
-				Message response;
-				strcpy(response.sender, SERVER_NAME);
-				strcpy(response.content, message->content);
-				response.content_size = strlen(response.content);
-
-				// client is new and wants to join a group
-				if (message->type == JOIN_CREATE_GROUP){
-					response.type = JOIN_CREATE_GROUP;
-					
-					// check if client count has hit capacity
-					if (client_count < max_size){
-
-						// add new group/client to group in hash table
-						char* group_id = message->content;
-						List* list = (List*)ht_get(group_to_clients, group_id);
-
-						if ( !list ){
-							List* list = create_list();
-							append_to_list(list, message->sender);
-							ht_set(group_to_clients, group_id, list);
-							
-							strcpy(response.content, "Added to new group!");
-							response.content_size = strlen(response.content);
-							respond_to_message(&response, sender_name, server);
-							
-							client_count++;
-						}
-						// else just update the key's list
-						else{
-							append_to_list(list, message->sender);
-							ht_set(group_to_clients, group_id, list);
-
-							strcpy(response.content, "Added to existing group!");
-							response.content_size = strlen(response.content);
-							respond_to_message(&response, sender_name, server);
-							
-							client_count++;
-						}
-					}
-					// send response to user that max limit is reached
-					else{
-						response.type = LEAVE_GROUP;
-            		strcpy(response.content, "Server is at maximum capacity. Please end session.");
-            		response.content_size = strlen(response.content);
-=======
 			const char* sender_name = message->sender;
 
 			Message response;
@@ -135,7 +82,6 @@ int main(int argc, char* argv[]){
 						
 						strcpy(response.content, "Added to new group!");
 						response.content_size = strlen(response.content);
->>>>>>> 05651a86c6b1e6d8b3065ded2a87e0c82131f2e6
 						respond_to_message(&response, sender_name, server);
 						
 						client_count++;
@@ -184,8 +130,6 @@ int main(int argc, char* argv[]){
 					current_client = current_client->next;
 				}
 
-<<<<<<< HEAD
-=======
 			}
 			// client wants list of available users to message from
 			// respective group
@@ -217,7 +161,6 @@ int main(int argc, char* argv[]){
 
             printf("%s\n", message->content);
 
->>>>>>> 05651a86c6b1e6d8b3065ded2a87e0c82131f2e6
         }
         sleep(1);
     }
