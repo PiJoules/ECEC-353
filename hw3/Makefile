@@ -1,15 +1,19 @@
 .PHONY: all
 
-all: server client
+EXE = server client test_linked_list
+LIB = chat.c hash.c list.c
 
-%: %.c chat.c
-	gcc $< chat.c -o $@ -std=gnu99 -Wall -Werror
+all: $(EXE)
+
+
+%: %.c $(LIB)
+	gcc $< $(LIB) -o $@ -std=gnu99 -Wall -Werror
 
 clean:
-	rm -rf server client
+	rm -rf $(EXE)
 
-valgrind: server client
-	valgrind --leak-check=yes ./server
+valgrind: $(EXE)
+	valgrind --leak-check=yes ./test_linked_list
 
 test: valgrind
 	ipcs -m
