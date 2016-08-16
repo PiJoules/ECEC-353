@@ -40,7 +40,7 @@ int main(int argc, char* argv[]){
     strcpy(message.content, group_id);
     message.content_size = strlen(message.content);
 
-	 //initialize response message. need to change type
+	 //initialize response message
     Message* returnMessage = send_message(&message, SERVER_NAME, client);
 	 char *flag = "capacity";
 	 char *msgContent = returnMessage->content;
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]){
 				strcpy(message.content, "");
 				message.content_size = strlen(message.content);
 				Message* response = send_message(&message, SERVER_NAME, client);
-				printf(response.content);
+				printf("%s\n", response->content);
 			}
 			//user wants to exit
 			else if(strstr(userInput, exitFlag) != NULL){
