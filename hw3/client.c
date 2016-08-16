@@ -57,14 +57,14 @@ int main(int argc, char* argv[]){
 
 	while(!kill_client){
 
-		if(client->status = AVAILABLE){
+		if(client->status == AVAILABLE){
 			// ask for user input
 			printf("Enter message: \n");
 			scanf("%s", userInput);
 
 			// broadcast message
 			if(strstr(userInput, broadcastFlag) != NULL){
-				message.type == BROADCAST_MESSAGE;
+				message.type = BROADCAST_MESSAGE;
 				strcpy(message.content, userInput);
 				message.content_size = strlen(message.content);
 				send_message(&message, SERVER_NAME, client);
@@ -72,8 +72,8 @@ int main(int argc, char* argv[]){
 			}
 			// private message. handle client B ID
 			else if(strstr(userInput, privateFlag) != NULL){
-			// user must enter 'Private UserID: Message'
-			// parse
+			/* user must enter 'Private UserID: Message'
+				 need to parse respective parts */
 
 			}
 			// display users flag
@@ -81,9 +81,10 @@ int main(int argc, char* argv[]){
 				message.type = DISPLAY_USERS;
 				strcpy(message.content, "");
 				message.content_size = strlen(message.content);
-				returnMessage = send_message(&message, SERVER_NAME, client);
-				printf("Members in group: %s", returnMessage.content);
+				Message* response = send_message(&message, SERVER_NAME, client);
+				printf(response.content);
 			}
+			//user wants to exit
 			else if(strstr(userInput, exitFlag) != NULL){
 				kill_client = 1;
 				printf("Exiting server");
@@ -93,26 +94,20 @@ int main(int argc, char* argv[]){
 				send_message(&message, SERVER_NAME, client);
 
 			}
-		}
+		
 
 		// handle messages sent to current node
 		else if(client->status == RECIEVED_MESSAGE){
-			
-			if(returnMessage->type == JOIN_CREATE_GROUP){
-				printf(returnMessage->content);
-				
-			}
-			else if
-			printf("%s\n", message->content);
-			response->type =  
-			}
-		// user gets a message from either broadcast or private
-		// and goes into HANDLING_RESPONSE status
-		else if(client->status == HANDLING_RESPONSE){ 
+			// if they receive a message from the shared space, go into
+			// received message status, then how will the delivered message be
+			// accessible? 
+			Message* bufferMessage = (Message*)(&(client->buffer));
 
+			printf("%s\n", bufferMessage->content);
 		}
-
-
+		
+	}
+	}
     // Free the client
     free_node(client);
 	 printf("Successfully quit client.\n");
