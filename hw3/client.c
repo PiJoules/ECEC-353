@@ -64,10 +64,16 @@ int main(int argc, char* argv[]){
 
 			// broadcast message
 			if(strstr(userInput, broadcastFlag) != NULL){
+				message.type == BROADCAST_MESSAGE;
+				strcpy(message.content, userInput);
+				message.content_size = strlen(message.content);
+				send_message(&message, SERVER_NAME, client);
 
 			}
 			// private message. handle client B ID
 			else if(strstr(userInput, privateFlag) != NULL){
+			// user must enter 'Private UserID: Message'
+			// parse
 
 			}
 			// display users flag
@@ -76,7 +82,7 @@ int main(int argc, char* argv[]){
 				strcpy(message.content, "");
 				message.content_size = strlen(message.content);
 				returnMessage = send_message(&message, SERVER_NAME, client);
-			
+				printf("Members in group: %s", returnMessage.content);
 			}
 			else if(strstr(userInput, exitFlag) != NULL){
 				kill_client = 1;
