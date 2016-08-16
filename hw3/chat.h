@@ -71,8 +71,8 @@ typedef enum {
 
 struct Message {
     char sender[NAME_SIZE];
-	 MessageType type;
-	 size_t content_size;
+	MessageType type;
+	size_t content_size;
     char content[MESSAGE_SIZE];  // Treat the same as the node buffer member.
 };
 
