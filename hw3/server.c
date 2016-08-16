@@ -7,6 +7,7 @@ static const int server_permissions = IPC_CREAT | READ | WRITE;
 static int kill_server = 0;
 
 #define VOIDIFY_FUNC(var) (void* (*)(void*))var
+#define VOIDIFY_FUNC2(var) (void (*)(void*))var
 
 /**
  * Simple strdup implementation.
@@ -48,7 +49,7 @@ int main(int argc, char* argv[]){
 	 // Hash table creation for storing groupID -> [client1, client2,...]
 	 int max_size = 10;
 	 Hashtable* group_to_clients = ht_create(max_size, free, VOIDIFY_FUNC(str_copy));
-	 Hashtable* clients = ht_create(max_size, ll_free, NULL);
+	 Hashtable* clients = ht_create(max_size, VOIDIFY_FUNC2(ll_free), VOIDIFY_FUNC(ll_copy));
 	 int client_count = 0;
 
     while (!kill_server){
@@ -59,7 +60,6 @@ int main(int argc, char* argv[]){
 			const char* sender_name = message->sender;
 
 			Message response;
-			Message senderMessage;
 			strcpy(response.sender, SERVER_NAME);
 			strcpy(response.content, message->content);
 			response.content_size = strlen(response.content);
@@ -73,11 +73,11 @@ int main(int argc, char* argv[]){
 
 					// add new group/client to group in hash table
 					char* group_id = message->content;
-					List* list = (List*)ht_get(group_to_clients, group_id);
+					LinkedList* list = (LinkedList*)ht_get(group_to_clients, group_id);
 
 					if ( !list ){
-						List* list = create_list();
-						append_to_list(list, message->sender);
+						LinkedList* list = ll_create(free, VOIDIFY_FUNC(str_copy));
+						ll_prepend(list, message->sender);
 						ht_set(group_to_clients, group_id, list);
 						
 						strcpy(response.content, "Added to new group!");
@@ -88,7 +88,7 @@ int main(int argc, char* argv[]){
 					}
 					// else just update the key's list
 					else{
-						append_to_list(list, message->sender);
+						ll_prepend(list, message->sender);
 						ht_set(group_to_clients, group_id, list);
 
 						strcpy(response.content, "Added to existing group!");
@@ -112,8 +112,8 @@ int main(int argc, char* argv[]){
 				// iterate through hashtable groupID->values to write
 				// broadcast message
 				char* group_id = (char*)ht_get(clients, message->sender);
-				List* list = (List*)ht_get(group_to_clients, group_id);
-				ListNode* current_client = list->head;
+				LinkedList* list = (LinkedList*)ht_get(group_to_clients, group_id);
+				LinkedListNode* current_client = list->head;
 				
 				strcpy(response.content, message->content);
 				response.type = BROADCAST_MESSAGE;
@@ -131,8 +131,8 @@ int main(int argc, char* argv[]){
 			else if (message->type == DISPLAY_USERS){
 				// use list_to_str
 				char* group_id = (char*)ht_get(clients, message->sender);
-				List* user_list = (List*)ht_get(group_to_clients, group_id);
-				char* conversion = list_to_str(user_list);
+				LinkedList* user_list = (LinkedList*)ht_get(group_to_clients, group_id);
+				char* conversion = ll_str(user_list);
 				size_t len = strlen(conversion);
 
 				strncpy(response.content, conversion, len);
@@ -144,8 +144,8 @@ int main(int argc, char* argv[]){
 			// client is leaving the server
 			else if (message->type == LEAVE_GROUP){
 				strcpy(response.sender, SERVER_NAME);
-            strcpy(response.content, "Session has been disconnected. Bye!");
-            response.content_size = strlen(response.content);
+                strcpy(response.content, "Session has been disconnected. Bye!");
+                response.content_size = strlen(response.content);
 				respond_to_message(&response, sender_name, server);
 			}
 			// print error
