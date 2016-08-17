@@ -7,7 +7,7 @@ all: $(EXE)
 
 
 %: %.c $(LIB)
-	gcc $< $(LIB) -o $@ -std=gnu99 -Wall -Werror
+	gcc $< $(LIB) -o $@ -std=gnu99 -Wall -Werror -pthread
 
 clean:
 	rm -rf $(EXE)

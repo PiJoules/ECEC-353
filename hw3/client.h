@@ -3,4 +3,6 @@
 
 #include "chat.h"
 
+#include <pthread.h>
+
 #endif

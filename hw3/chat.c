@@ -119,12 +119,13 @@ Message* send_message(Message* message, const char* recipient, Node* sender){
     // Wait for response
     recipient_node->status = RECIEVED_MESSAGE;
     detatch_node(recipient_node);
-    while (sender->status != HANDLING_RESPONSE){
+    //while (sender->status != HANDLING_RESPONSE){
+    while (sender->status != AVAILABLE){
         sleep(1);
     }
 
     // Return the response
-    sender->status = AVAILABLE;
+    //sender->status = AVAILABLE;
     return (Message*)(&(sender->buffer));
 }
 
@@ -144,7 +145,8 @@ void respond_to_message(Message* response, const char* recipient_name, Node* sen
     else{
         strcpy(recipient->buffer, "");
     }
-    recipient->status = HANDLING_RESPONSE;
+    //recipient->status = HANDLING_RESPONSE;
+    recipient->status = AVAILABLE;
     detatch_node(recipient);
     sender->status = AVAILABLE;
 }

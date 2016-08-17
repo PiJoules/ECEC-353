@@ -65,7 +65,7 @@ typedef enum {
     JOIN_CREATE_GROUP,
     BROADCAST_MESSAGE,
     PRIVATE_MESSAGE,
-	 LEAVE_GROUP,
+	LEAVE_GROUP,
     DISPLAY_USERS,
 } MessageType;
 
