@@ -102,9 +102,9 @@ int main(int argc, char* argv[]){
 				else{
 					response.type = LEAVE_GROUP;
                     strcpy(response.content, "Server is at maximum capacity. Please end session.");
-					ht_remove(clients, sender_name);
-					ll_remove_value(ht_get(group_to_clients, group_id), (void*)sender_name);
-					client_count--;
+					//ht_remove(clients, sender_name);
+					//ll_remove_value(ht_get(group_to_clients, group_id), (void*)sender_name);
+					//client_count--;
 				}
                 response.content_size = strlen(response.content);
                 respond_to_message(&response, sender_name, server);
@@ -174,6 +174,20 @@ int main(int argc, char* argv[]){
 			}
 			// client is leaving the server
 			else if (message->type == LEAVE_GROUP){
+                char* group_id = ht_get(clients, sender_name);
+                LinkedList* ll = ht_get(group_to_clients, group_id);
+                printf("removing '%s' from '%s'.\n", sender_name, group_id);
+                char* s = ll_str(ll);
+                printf("existing: %s\n", s);
+                free(s);
+
+                ht_remove(clients, sender_name);
+                ll_remove_value(ll, (void*)sender_name);
+                client_count--;
+                s = ll_str(ll);
+                printf("after: %s\n", s);
+                free(s);
+
                 strcpy(response.content, "Session has been disconnected. Bye!");
                 response.content_size = strlen(response.content);
 				respond_to_message(&response, sender_name, server);

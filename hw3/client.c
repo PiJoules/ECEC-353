@@ -8,18 +8,32 @@ static char client_name[256];
 static int kill_client = 0;
 static Node* client;
 
+
+void send_leave_message(){
+    kill_client = 1;
+    printf("Exiting server");
+    Message message;
+    strcpy(message.sender, client_name);
+    message.type = LEAVE_GROUP;
+    strcpy(message.content, "");
+    message.content_size = strlen(message.content);
+    send_message(&message, SERVER_NAME, client);
+}
+
+
 void sigterm_handler(int signum){
 	kill_client = 1;
 	fprintf(stderr, "Exiting client. Attempting to free client.\n");
+    send_leave_message();
     free_node(client);
 }
 
 
 void* handle_user_input(void* args){
     char* userInput = NULL;
-	char *privateFlag = "Private";
-	char *displayFlag = "Display Users";
-	char *exitFlag = "exit.";
+	char privateFlag[] = "0";
+	char displayFlag[] = "1";
+	char exitFlag[] = "2";
     while (!kill_client){
         printf("Enter message: ");
         size_t size;
@@ -30,7 +44,7 @@ void* handle_user_input(void* args){
 
         }
         // display users flag
-        else if(strstr(userInput, displayFlag) == userInput){
+        else if(!strcmp(userInput, displayFlag)){
             Message message;
             strcpy(message.sender, client_name);
             message.type = DISPLAY_USERS;
@@ -39,15 +53,8 @@ void* handle_user_input(void* args){
             Message* returnMessage = send_message(&message, SERVER_NAME, client);
             printf("users in group: %s\n", returnMessage->content);
         }
-        else if(strstr(userInput, exitFlag) == userInput){
-            kill_client = 1;
-            printf("Exiting server");
-            Message message;
-            strcpy(message.sender, client_name);
-            message.type = LEAVE_GROUP;
-            strcpy(message.content, "");
-            message.content_size = strlen(message.content);
-            send_message(&message, SERVER_NAME, client);
+        else if(!strcmp(userInput, exitFlag)){
+            send_leave_message();
         }
         else {
             // Broadcast
@@ -57,16 +64,8 @@ void* handle_user_input(void* args){
             strcpy(response.sender, client_name);
             strcpy(response.content, userInput);
             response.content_size = strlen(response.content);
-            printf("Sending message.\n");
-            while (client->status != AVAILABLE){
-                printf("Waiting to be available before sending message.\n");
-                sleep(1);
-            }
-            printf("client status: %d\n", client->status);
             send_message(&response, SERVER_NAME, client);
-            printf("Sent message.\n");
         }
-        printf("Kill client: %d\n", kill_client);
     }
     return NULL;
 }
@@ -105,12 +104,10 @@ int main(int argc, char* argv[]){
 
 	//initialize response message. need to change type
     Message* returnMessage = send_message(&message, SERVER_NAME, client);
-	char flag[] = "capacity";
-	char *msgContent = returnMessage->content;
-
-	if(strstr(msgContent, flag) != NULL){
-        kill_client = 1;
-	}
+    if (returnMessage->type == LEAVE_GROUP){
+        free_node(client);
+        return 0;
+    }
 
     pthread_t pth;
     pthread_create(&pth, NULL, handle_user_input, NULL);
@@ -120,29 +117,26 @@ int main(int argc, char* argv[]){
 		if(client->status == RECIEVED_MESSAGE){
             Message* message = (Message*)(&(client->buffer));
 			const char* sender_name = message->sender;
-			printf("[%s] %s\n", sender_name, returnMessage->content);
 
-            Message response;
-            strcpy(response.sender, client_name);
-            strcpy(response.content, "");
-            response.content_size = strlen(response.content);
+            switch (message->type){
+                case LEAVE_GROUP:
+                    kill_client = 1;
+                    free_node(client);
+                    break;
+                default:
+                    printf("[%s] %s\n", sender_name, returnMessage->content);
 
-            respond_to_message(&response, sender_name, client);
-            printf("Handled message.\n");
-			//if(returnMessage->type == JOIN_CREATE_GROUP){
-			//	printf("%s\n", returnMessage->content);
-			//}
-			//else if
-			//printf("%s\n", message->content);
-			//response->type =  
+                    Message response;
+                    strcpy(response.sender, client_name);
+                    strcpy(response.content, "");
+                    response.content_size = strlen(response.content);
+
+                    respond_to_message(&response, sender_name, client);
+                    break;
+            }
         }
-		// user gets a message from either broadcast or private
-		// and goes into HANDLING_RESPONSE status
-		//else if(client->status == HANDLING_RESPONSE){ 
         sleep(1);
     }
-    // Free the client
-    //free_node(client);
 	printf("Successfully quit client.\n");
 
     return 0;
