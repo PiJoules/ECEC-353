@@ -88,12 +88,12 @@ int main(int argc, char* argv[]){
 						ll_prepend(list, message->sender);
 						ht_set(group_to_clients, group_id, list);
 						
-						strcpy(response.content, "Added to new group!");
+						strcpy(response.content, "\0");
 					}
 					else{
                         // else just update the key's list
 						ll_prepend(list, message->sender);
-						strcpy(response.content, "Added to existing group!");
+						strcpy(response.content, "\0");
 					}
                     ht_set(clients, sender_name, group_id);
                     client_count++;
@@ -102,9 +102,6 @@ int main(int argc, char* argv[]){
 				else{
 					response.type = LEAVE_GROUP;
                     strcpy(response.content, "Server is at maximum capacity. Please end session.");
-					//ht_remove(clients, sender_name);
-					//ll_remove_value(ht_get(group_to_clients, group_id), (void*)sender_name);
-					//client_count--;
 				}
                 response.content_size = strlen(response.content);
                 respond_to_message(&response, sender_name, server);

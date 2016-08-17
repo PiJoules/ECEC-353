@@ -31,9 +31,9 @@ void sigterm_handler(int signum){
 
 void* handle_user_input(void* args){
     char* userInput = NULL;
-	char privateFlag[] = "0";
-	char displayFlag[] = "1";
-	char exitFlag[] = "2";
+	char privateFlag[] = "[private";
+	char displayFlag[] = "[display]\n";
+	char exitFlag[] = "[exit]\n";
     while (!kill_client){
         printf("Enter message: ");
         size_t size;
@@ -41,7 +41,25 @@ void* handle_user_input(void* args){
 
         // private message. handle client B ID
         if(strstr(userInput, privateFlag) == userInput){
+            char user[256];
+            char input[256];
+            sscanf(userInput, "[private %[^]]] %s", user, input);
+            printf("user: %s\n", user);
+            printf("input: %s\n", input);
 
+            if (!node_is_up(user)){
+                printf("This user is not available at the moment.\n");
+            }
+            else if (!strcmp(user, client_name)){
+                printf("Cannot send a private message to self.\n");
+            }
+            else {
+                Message message;
+                strcpy(message.sender, client_name);
+                strcpy(message.content, input);
+                message.content_size = strlen(message.content);
+                send_message(&message, user, client);
+            }
         }
         // display users flag
         else if(!strcmp(userInput, displayFlag)){
@@ -89,6 +107,13 @@ int main(int argc, char* argv[]){
 
     // Get group id
     char* group_id = argv[1];
+
+    // Check for unique name
+    if (node_is_up(argv[2])){
+        printf("The name '%s' is already taken. Please use another one.\n", argv[2]);
+        return 0;
+    }
+
     strcpy(client_name, argv[2]);
 
     // Create client and server node
