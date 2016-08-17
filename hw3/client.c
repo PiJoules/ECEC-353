@@ -141,8 +141,6 @@ int main(int argc, char* argv[]){
 		//else if(client->status == HANDLING_RESPONSE){ 
         sleep(1);
     }
-
-
     // Free the client
     //free_node(client);
 	printf("Successfully quit client.\n");
