@@ -1,0 +1,11 @@
+Makefile
+*.log
+*.cache
+*.status
+src/bbfs
+clarifications.txt
+example/rootdir/
+test_dir*/
+src/config.h*
+src/.deps/
+src/stamp-h1
