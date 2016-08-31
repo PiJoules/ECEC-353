@@ -90,7 +90,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_bbfs_OBJECTS = bbfs.$(OBJEXT) log.$(OBJEXT)
+am_bbfs_OBJECTS = bbfs.$(OBJEXT) log.$(OBJEXT) atomic_file.$(OBJEXT)
 bbfs_OBJECTS = $(am_bbfs_OBJECTS)
 bbfs_LDADD = $(LDADD)
 bbfs_DEPENDENCIES =
@@ -242,7 +242,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-bbfs_SOURCES = bbfs.c log.c log.h  params.h
+bbfs_SOURCES = bbfs.c log.c log.h  params.h atomic_file.c atomic_file.h
 AM_CFLAGS = @FUSE_CFLAGS@
 LDADD = @FUSE_LIBS@
 all: config.h
@@ -348,6 +348,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atomic_file.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bbfs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/log.Po@am__quote@
 
